@@ -1,6 +1,11 @@
 # 谁是卧底 - 局域网实时游戏
+单纯可以随便开起来玩一下的小网页，因为普通的对人数要求有限制，自己搞一个无限人数了
+宝塔php+数据库redis，php那要安装redis扩展就能玩了，运行用start_safe.sh，省了开php禁忌函数
 
 基于 PHP + Workerman + Redis 的局域网谁是卧底游戏系统。
+<img width="960" height="1320" alt="image" src="https://github.com/user-attachments/assets/7ffd145c-7cd2-43e6-995a-da258c9d250e" />
+
+<img width="956" height="1193" alt="image" src="https://github.com/user-attachments/assets/68e68a30-91ed-4d71-88c4-8a8d6a86f7ab" />
 
 ## 📁 项目结构
 
