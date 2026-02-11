@@ -13,17 +13,16 @@ require_once __DIR__ . '/src/RoomConfig.php';
 use Workerman\Worker;
 use Workerman\Connection\TcpConnection;
 
-// ==================== 宝塔环境兼容性配置 ====================
+// 检查 pcntl 扩展是否可用
+$pcntl_disabled = !function_exists('pcntl_fork') || !function_exists('pcntl_signal');
 
-// 设置 PID 文件目录为 /tmp（避免权限问题）
-if (strpos(__DIR__, '/www/wwwroot/') !== false) {
-    // 宝塔环境
-    $pidDir = '/tmp/workerman_pids';
-    if (!is_dir($pidDir)) {
-        @mkdir($pidDir, 0777, true);
-    }
-    // 设置 Worker 的 PID 目录
-    Worker::$pidFile = $pidDir . '/' . basename(__DIR__) . '.pid';
+if ($pcntl_disabled) {
+    echo "警告: pcntl 函数被禁用，使用单进程模式运行\n";
+    echo "如需启用多进程，请在 php.ini 中移除 disable_functions 中的 pcntl_* 函数\n";
+    echo "当前模式适合开发和小规模部署\n\n";
+    
+    // 设置为单进程模式
+    Worker::$daemonize = false;
 }
 
 // 创建 WebSocket 服务器

@@ -36,12 +36,13 @@ sswd/
 
 ```bash
 cd /www/wwwroot/your-domain/sswd
-composer install
+/www/server/php/74/bin/php /usr/bin/composer install
 ```
 
-如果 composer 命令找不到，使用完整路径：
+或者如果 composer 在 PHP 目录下：
 ```bash
-/www/server/php/74/bin/php /usr/bin/composer install
+cd /www/wwwroot/your-domain/sswd
+composer install
 ```
 
 ### 3. 设置脚本权限
@@ -53,8 +54,6 @@ chmod +x start.sh stop.sh status.sh
 ### 4. 防火墙设置
 
 在宝塔面板「安全」中放行端口 **2346**（WebSocket 端口）
-
-同时检查服务器安全组（阿里云/腾讯云等）是否放行 2346
 
 ### 5. 启动服务
 
@@ -71,10 +70,6 @@ chmod +x start.sh stop.sh status.sh
 # 停止服务
 ./stop.sh
 ```
-
-### 6. 访问游戏
-
-浏览器打开：`http://你的域名/sswd/public/`
 
 ## 🎮 游戏流程
 
@@ -170,54 +165,62 @@ chmod +x start.sh stop.sh status.sh
 
 ## 🐛 常见问题
 
-### 1. composer install 出错
-
-**错误：Your requirements could not be resolved**
-
-解决方案：确保已安装 Predis，重新运行：
-```bash
-composer install
-```
-
-如果仍有问题，检查 PHP 版本：
-```bash
-php -v
-```
-
-### 2. WebSocket 连接失败
+### 1. WebSocket 连接失败
 - 检查 2346 端口是否在宝塔「安全」中放行
 - 检查服务器安全组（阿里云/腾讯云）是否放行 2346
-- 检查防火墙: `sudo iptables -L | grep 2346`
 
-### 3. Redis 连接失败
+### 2. composer install 失败
 ```bash
-# 检查 Redis 是否运行
-redis-cli ping
-# 应该返回 PONG
+# 使用宝塔自带的 composer
+/www/server/php/74/bin/php /usr/bin/composer install --ignore-platform-reqs
+```
 
+### 3. 找不到 PHP
+修改 `start.sh` 中的 `PHP_BIN` 路径为你的 PHP 实际路径：
+```bash
+# 查找 PHP 路径
+which php
+# 或
+find /www -name "php" -type f 2>/dev/null
+```
+
+### 4. Redis 连接失败
+```bash
 # 检查 Redis 状态
 systemctl status redis
-
 # 启动 Redis
 systemctl start redis
 ```
 
-### 4. PHP 找不到 Predis
+### 5. pcntl 函数被禁用错误
+
+如果看到错误：
+```
+pcntl_signal() has been disabled for security reasons
+pcntl_fork() has been disabled for security reasons
+```
+
+**解决方案：**
+
+#### 方法 1: 修改 PHP 配置（推荐）
+
+1. 进入宝塔面板 → 软件商店 → PHP 7.4 → 设置 → 禁用函数
+2. 删除以下函数：
+   - `pcntl_alarm`
+   - `pcntl_fork`
+   - `pcntl_signal`
+   - `pcntl_wait`
+   - `pcntl_waitpid`
+3. 保存并重载配置
+
+#### 方法 2: 使用安全启动脚本
+
 ```bash
-# 确保 composer.json 中包含了 Predis
-cat composer.json | grep predis
-
-# 重新安装
-composer install --no-cache
+chmod +x start_safe.sh
+./start_safe.sh
 ```
 
-### 5. Workerman 报错 "Cannot assign requested address"
-
-说明 Workerman 绑定的 IP 有问题，修改 `ws_server.php` 中的绑定地址：
-```php
-// 改为
-$ws_worker = new Worker("websocket://0.0.0.0:2346");
-```
+📖 详细说明请查看 [FIX_PCNTL.md](FIX_PCNTL.md)
 
 ---
 
