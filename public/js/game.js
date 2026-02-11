@@ -25,8 +25,13 @@
         speaker: null,
         players: [],
         votes: {},
-        hasVoted: false
+        hasVoted: false,
+        speakTime: 0,  // 发言剩余时间
+        firstSpeaker: null  // 第一个发言人座位号
     };
+
+    // 倒计时定时器
+    let countdownTimer = null;
 
     // ==================== DOM 元素 ====================
     const elements = {
@@ -243,8 +248,11 @@
             case 'state':
                 gameState.status = data.status;
                 gameState.speaker = data.speaker;
+                gameState.speakTime = data.speakTime || 0;
+                gameState.firstSpeaker = data.firstSpeaker || null;
                 updateStatus();
                 updateSpeaker();
+                startCountdown();
                 break;
 
             case 'players':
@@ -260,6 +268,11 @@
             case 'votes':
                 gameState.votes = data.data;
                 updateVotes();
+                break;
+
+            case 'countdown':
+                gameState.speakTime = data.time;
+                updateCountdownDisplay();
                 break;
         }
     }
@@ -301,13 +314,50 @@
             
             const player = gameState.players.find(p => p.seat === gameState.speaker);
             const name = player ? player.name : `座位${gameState.speaker}`;
-            elements.currentSpeaker.textContent = `${gameState.speaker}号 ${name}`;
+            
+            // 显示倒计时
+            const timeText = gameState.speakTime > 0 ? ` (${gameState.speakTime}秒)` : '';
+            elements.currentSpeaker.textContent = `${gameState.speaker}号 ${name}${timeText}`;
         } else {
             elements.speakerBox.classList.add('hidden');
+            stopCountdown();
         }
 
         // 更新玩家列表中的发言状态
         updatePlayersList();
+    }
+
+    // 启动倒计时
+    function startCountdown() {
+        stopCountdown();
+        if (gameState.status === 'started' && gameState.speakTime > 0) {
+            countdownTimer = setInterval(() => {
+                if (gameState.speakTime > 0) {
+                    gameState.speakTime--;
+                    updateCountdownDisplay();
+                } else {
+                    stopCountdown();
+                }
+            }, 1000);
+        }
+    }
+
+    // 停止倒计时
+    function stopCountdown() {
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+    }
+
+    // 更新倒计时显示
+    function updateCountdownDisplay() {
+        if (gameState.status === 'started' && gameState.speaker) {
+            const player = gameState.players.find(p => p.seat === gameState.speaker);
+            const name = player ? player.name : `座位${gameState.speaker}`;
+            const timeText = gameState.speakTime > 0 ? ` (${gameState.speakTime}秒)` : '';
+            elements.currentSpeaker.textContent = `${gameState.speaker}号 ${name}${timeText}`;
+        }
     }
 
     function updatePlayersList() {
@@ -327,9 +377,20 @@
                 div.classList.add('speaking');
             }
 
+            // 管理员可以看到身份和词语
+            let identityHtml = '';
+            if (gameState.isAdmin && player.role && player.word) {
+                const roleClass = player.role === '卧底' ? 'spy' : 'civilian';
+                identityHtml = `
+                    <div class="player-role ${roleClass}">${player.role}</div>
+                    <div class="player-word">${player.word}</div>
+                `;
+            }
+
             div.innerHTML = `
                 <div class="seat">${player.seat}号</div>
                 <div class="name">${escapeHtml(player.name)}</div>
+                ${identityHtml}
             `;
 
             elements.playersList.appendChild(div);

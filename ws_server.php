@@ -37,6 +37,12 @@ $roomConnections = [];
 // 连接信息: connection_id => ['room' => room_id, 'name' => name, 'seat' => seat]
 $connectionInfo = [];
 
+// 房间倒计时定时器: room_id => timer_id
+$roomTimers = [];
+
+// 默认发言时间（秒）
+const SPEAK_DURATION = 60;
+
 /**
  * 广播消息到房间所有连接
  */
@@ -118,7 +124,9 @@ function broadcastState(string $roomId): void
     broadcastToRoom($roomId, [
         'type' => 'state',
         'status' => $redis->getRoomStatus($roomId),
-        'speaker' => $redis->getSpeaker($roomId)
+        'speaker' => $redis->getSpeaker($roomId),
+        'speakTime' => $redis->getSpeakTime($roomId),
+        'firstSpeaker' => $redis->getFirstSpeaker($roomId)
     ]);
 }
 
@@ -130,12 +138,23 @@ function broadcastPlayers(string $roomId): void
     $redis = RedisClient::getInstance();
     $players = $redis->getPlayers($roomId);
     
+    // 获取房间配置
+    $seats = RoomConfig::getSeats($roomId);
+    $roleMap = [];
+    $wordMap = [];
+    foreach ($seats as $seatData) {
+        $roleMap[$seatData['seat']] = $seatData['role'];
+        $wordMap[$seatData['seat']] = $seatData['word'];
+    }
+    
     $list = [];
     foreach ($players as $seat => $player) {
         $list[] = [
             'seat' => (int)$seat,
             'name' => $player['name'],
-            'alive' => $player['alive']
+            'alive' => $player['alive'],
+            'role' => $roleMap[$seat] ?? '',
+            'word' => $wordMap[$seat] ?? ''
         ];
     }
     
@@ -173,6 +192,95 @@ function broadcastChat(string $roomId, array $msg): void
         'type' => 'chat',
         'msg' => $msg
     ]);
+}
+
+/**
+ * 启动房间倒计时
+ */
+function startRoomCountdown(string $roomId): void
+{
+    global $roomTimers;
+    
+    // 先停止已有的计时器
+    stopRoomCountdown($roomId);
+    
+    $redis = RedisClient::getInstance();
+    
+    // 设置倒计时时间
+    $redis->setSpeakTime($roomId, SPEAK_DURATION);
+    
+    // 创建定时器，每秒执行一次
+    $roomTimers[$roomId] = \Workerman\Lib\Timer::add(1, function() use ($roomId, $redis) {
+        $time = $redis->decrementSpeakTime($roomId);
+        
+        // 广播倒计时更新
+        broadcastToRoom($roomId, [
+            'type' => 'countdown',
+            'time' => $time
+        ]);
+        
+        // 时间到，自动切换下一个发言人
+        if ($time <= 0) {
+            $currentSpeaker = $redis->getSpeaker($roomId);
+            $firstSpeaker = $redis->getFirstSpeaker($roomId);
+            
+            if ($currentSpeaker !== null) {
+                $nextSeat = getNextAliveSeat($roomId, $currentSpeaker);
+                
+                // 检查是否轮回一圈（回到第一个发言人）
+                if ($nextSeat === $firstSpeaker) {
+                    // 轮回一圈，开启投票
+                    stopRoomCountdown($roomId);
+                    
+                    $redis->setRoomStatus($roomId, 'voting');
+                    $redis->clearVotes($roomId);
+                    broadcastState($roomId);
+                    
+                    $sysMsg = [
+                        'seat' => 0,
+                        'name' => '系统',
+                        'msg' => '所有人发言完毕，开始投票！请选择你认为的卧底。',
+                        'time' => date('H:i:s')
+                    ];
+                    $redis->addChat($roomId, $sysMsg);
+                    broadcastChat($roomId, $sysMsg);
+                } elseif ($nextSeat !== null) {
+                    // 切换到下一位发言人
+                    $redis->setSpeaker($roomId, $nextSeat);
+                    $redis->setSpeakTime($roomId, SPEAK_DURATION);
+                    broadcastState($roomId);
+                    
+                    $player = $redis->getPlayer($roomId, $nextSeat);
+                    $playerName = $player ? $player['name'] : "座位$nextSeat";
+                    
+                    $sysMsg = [
+                        'seat' => 0,
+                        'name' => '系统',
+                        'msg' => "请 {$nextSeat}号 {$playerName} 发言",
+                        'time' => date('H:i:s')
+                    ];
+                    $redis->addChat($roomId, $sysMsg);
+                    broadcastChat($roomId, $sysMsg);
+                }
+            }
+        }
+    });
+}
+
+/**
+ * 停止房间倒计时
+ */
+function stopRoomCountdown(string $roomId): void
+{
+    global $roomTimers;
+    
+    if (isset($roomTimers[$roomId])) {
+        \Workerman\Lib\Timer::del($roomTimers[$roomId]);
+        unset($roomTimers[$roomId]);
+    }
+    
+    $redis = RedisClient::getInstance();
+    $redis->setSpeakTime($roomId, 0);
 }
 
 // ==================== 事件处理 ====================
@@ -236,17 +344,31 @@ $ws_worker->onWebSocketConnect = function(TcpConnection $connection, $http_heade
     $connection->send(json_encode([
         'type' => 'state',
         'status' => $redis->getRoomStatus($roomId),
-        'speaker' => $redis->getSpeaker($roomId)
+        'speaker' => $redis->getSpeaker($roomId),
+        'speakTime' => $redis->getSpeakTime($roomId),
+        'firstSpeaker' => $redis->getFirstSpeaker($roomId)
     ], JSON_UNESCAPED_UNICODE));
     
-    // 发送玩家列表
+    // 发送玩家列表（包含身份和词语）
     $players = $redis->getPlayers($roomId);
+    
+    // 获取房间配置
+    $seats = RoomConfig::getSeats($roomId);
+    $roleMap = [];
+    $wordMap = [];
+    foreach ($seats as $seatData) {
+        $roleMap[$seatData['seat']] = $seatData['role'];
+        $wordMap[$seatData['seat']] = $seatData['word'];
+    }
+    
     $list = [];
     foreach ($players as $s => $player) {
         $list[] = [
             'seat' => (int)$s,
             'name' => $player['name'],
-            'alive' => $player['alive']
+            'alive' => $player['alive'],
+            'role' => $roleMap[$s] ?? '',
+            'word' => $wordMap[$s] ?? ''
         ];
     }
     usort($list, function($a, $b) {
@@ -324,6 +446,10 @@ $ws_worker->onMessage = function(TcpConnection $connection, $data) {
             $firstSeat = getFirstAliveSeat($roomId);
             if ($firstSeat !== null) {
                 $redis->setSpeaker($roomId, $firstSeat);
+                $redis->setFirstSpeaker($roomId, $firstSeat);  // 记录第一个发言人
+                
+                // 启动倒计时
+                startRoomCountdown($roomId);
             }
             
             broadcastState($roomId);
@@ -339,7 +465,7 @@ $ws_worker->onMessage = function(TcpConnection $connection, $data) {
             broadcastChat($roomId, $sysMsg);
             break;
             
-        // 3️⃣ 下一位发言
+        // 3️⃣ 下一位发言（手动切换）
         case 'next':
             if (!$isAdmin) break;
             
@@ -347,8 +473,31 @@ $ws_worker->onMessage = function(TcpConnection $connection, $data) {
             if ($currentSpeaker === null) break;
             
             $nextSeat = getNextAliveSeat($roomId, $currentSpeaker);
-            if ($nextSeat !== null) {
+            $firstSpeaker = $redis->getFirstSpeaker($roomId);
+            
+            // 检查是否轮回一圈
+            if ($nextSeat === $firstSpeaker) {
+                // 轮回一圈，开启投票
+                stopRoomCountdown($roomId);
+                
+                $redis->setRoomStatus($roomId, 'voting');
+                $redis->clearVotes($roomId);
+                broadcastState($roomId);
+                
+                $sysMsg = [
+                    'seat' => 0,
+                    'name' => '系统',
+                    'msg' => '所有人发言完毕，开始投票！请选择你认为的卧底。',
+                    'time' => date('H:i:s')
+                ];
+                $redis->addChat($roomId, $sysMsg);
+                broadcastChat($roomId, $sysMsg);
+            } elseif ($nextSeat !== null) {
                 $redis->setSpeaker($roomId, $nextSeat);
+                
+                // 重启倒计时
+                startRoomCountdown($roomId);
+                
                 broadcastState($roomId);
                 
                 // 获取下一位玩家名字
@@ -369,6 +518,9 @@ $ws_worker->onMessage = function(TcpConnection $connection, $data) {
         // 4️⃣ 开启投票
         case 'vote_start':
             if (!$isAdmin) break;
+            
+            // 停止倒计时
+            stopRoomCountdown($roomId);
             
             $redis->setRoomStatus($roomId, 'voting');
             $redis->clearVotes($roomId);
@@ -438,6 +590,18 @@ $ws_worker->onMessage = function(TcpConnection $connection, $data) {
             
             // 恢复游戏状态
             $redis->setRoomStatus($roomId, 'started');
+            
+            // 设置下一个发言人
+            $currentSpeaker = $redis->getSpeaker($roomId);
+            $nextSeat = getNextAliveSeat($roomId, $currentSpeaker ? $currentSpeaker : $targetSeat);
+            if ($nextSeat !== null) {
+                $redis->setSpeaker($roomId, $nextSeat);
+                // 重新记录第一个发言人
+                $redis->setFirstSpeaker($roomId, $nextSeat);
+                // 启动倒计时
+                startRoomCountdown($roomId);
+            }
+            
             broadcastState($roomId);
             
             $sysMsg = [
@@ -453,6 +617,9 @@ $ws_worker->onMessage = function(TcpConnection $connection, $data) {
         // 7️⃣ 管理员结束本局
         case 'end':
             if (!$isAdmin) break;
+            
+            // 停止倒计时
+            stopRoomCountdown($roomId);
             
             $redis->setRoomStatus($roomId, 'ended');
             broadcastState($roomId);
@@ -481,8 +648,9 @@ $ws_worker->onClose = function(TcpConnection $connection) {
             unset($roomConnections[$roomId][$connection->id]);
         }
         
-        // 清理空房间
+        // 如果房间没有连接了，停止倒计时
         if (empty($roomConnections[$roomId])) {
+            stopRoomCountdown($roomId);
             unset($roomConnections[$roomId]);
         }
         

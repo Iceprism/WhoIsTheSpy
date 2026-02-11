@@ -144,6 +144,54 @@ class RedisClient
         return $this->redis->set("room:{$roomId}:speaker", $seat);
     }
 
+    /**
+     * 获取第一个发言人座位号
+     */
+    public function getFirstSpeaker(string $roomId): ?int
+    {
+        $speaker = $this->redis->get("room:{$roomId}:first_speaker");
+        return $speaker !== false ? (int)$speaker : null;
+    }
+
+    /**
+     * 设置第一个发言人座位号
+     */
+    public function setFirstSpeaker(string $roomId, int $seat): bool
+    {
+        return $this->redis->set("room:{$roomId}:first_speaker", $seat);
+    }
+
+    /**
+     * 获取发言剩余时间
+     */
+    public function getSpeakTime(string $roomId): int
+    {
+        $time = $this->redis->get("room:{$roomId}:speak_time");
+        return $time !== false ? (int)$time : 0;
+    }
+
+    /**
+     * 设置发言剩余时间
+     */
+    public function setSpeakTime(string $roomId, int $time): bool
+    {
+        return $this->redis->set("room:{$roomId}:speak_time", $time);
+    }
+
+    /**
+     * 减少发言时间（返回新的时间）
+     */
+    public function decrementSpeakTime(string $roomId): int
+    {
+        $key = "room:{$roomId}:speak_time";
+        $time = $this->redis->decr($key);
+        if ($time < 0) {
+            $this->redis->set($key, 0);
+            return 0;
+        }
+        return $time;
+    }
+
     // ==================== 投票 ====================
 
     /**

@@ -316,6 +316,31 @@ body {
     word-break: break-all;
 }
 
+.player-item .player-role {
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.player-item .player-role.civilian {
+    background: #d5f4e6;
+    color: #27ae60;
+}
+
+.player-item .player-role.spy {
+    background: #fadbd8;
+    color: #e74c3c;
+}
+
+.player-item .player-word {
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 3px;
+    color: #333;
+}
+
 /* 投票区域 */
 .vote-section {
     background: white;
