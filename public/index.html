@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>谁是卧底</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 登录页面 -->
+        <div id="login-page" class="page active">
+            <div class="login-box">
+                <h1>🕵️ 谁是卧底</h1>
+                <div class="form-group">
+                    <label for="room-input">房间号</label>
+                    <input type="text" id="room-input" placeholder="请输入房间号 (如: A001)" maxlength="10">
+                </div>
+                <div class="form-group">
+                    <label for="name-input">你的昵称</label>
+                    <input type="text" id="name-input" placeholder="请输入昵称" maxlength="20">
+                </div>
+                <button id="join-btn" class="btn btn-primary">进入房间</button>
+                <p class="hint">管理员请输入昵称: admin</p>
+                <p id="login-error" class="error"></p>
+            </div>
+        </div>
+
+        <!-- 游戏页面 -->
+        <div id="game-page" class="page">
+            <!-- 顶部信息栏 -->
+            <div class="header">
+                <div class="room-info">
+                    <span id="room-id"></span>
+                    <span id="room-status" class="status-badge"></span>
+                </div>
+                <div class="player-info">
+                    <span id="player-seat"></span>
+                    <span id="player-name"></span>
+                </div>
+            </div>
+
+            <!-- 身份卡片 -->
+            <div id="identity-card" class="identity-card">
+                <div class="card-inner">
+                    <div class="card-front">
+                        <span>点击查看身份</span>
+                    </div>
+                    <div class="card-back">
+                        <div class="role" id="my-role"></div>
+                        <div class="word" id="my-word"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 当前发言人 -->
+            <div id="speaker-box" class="speaker-box hidden">
+                <span>🎤 当前发言人: </span>
+                <span id="current-speaker"></span>
+            </div>
+
+            <!-- 玩家列表 -->
+            <div class="players-section">
+                <h3>👥 玩家列表</h3>
+                <div id="players-list" class="players-list"></div>
+            </div>
+
+            <!-- 投票区域 -->
+            <div id="vote-section" class="vote-section hidden">
+                <h3>🗳️ 投票</h3>
+                <div id="vote-list" class="vote-list"></div>
+                <div id="vote-result" class="vote-result"></div>
+            </div>
+
+            <!-- 管理员控制面板 -->
+            <div id="admin-panel" class="admin-panel hidden">
+                <h3>🎮 管理员控制</h3>
+                <div class="admin-buttons">
+                    <button id="btn-start" class="btn btn-success">开始游戏</button>
+                    <button id="btn-next" class="btn btn-info">下一位发言</button>
+                    <button id="btn-vote-start" class="btn btn-warning">开启投票</button>
+                    <button id="btn-end" class="btn btn-danger">结束本局</button>
+                </div>
+                <div class="admin-kill">
+                    <h4>淘汰玩家</h4>
+                    <div id="kill-list" class="kill-list"></div>
+                </div>
+            </div>
+
+            <!-- 聊天区域 -->
+            <div class="chat-section">
+                <h3>💬 聊天</h3>
+                <div id="chat-box" class="chat-box"></div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="输入消息..." maxlength="500">
+                    <button id="chat-send" class="btn btn-primary">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{
+  "A001": {
+    "seats": [
+      {"seat": 1, "role": "平民", "word": "苹果"},
+      {"seat": 2, "role": "平民", "word": "苹果"},
+      {"seat": 3, "role": "卧底", "word": "香蕉"},
+      {"seat": 4, "role": "平民", "word": "苹果"},
+      {"seat": 5, "role": "平民", "word": "苹果"},
+      {"seat": 6, "role": "平民", "word": "苹果"},
+      {"seat": 7, "role": "平民", "word": "苹果"},
+      {"seat": 8, "role": "卧底", "word": "香蕉"},
+      {"seat": 9, "role": "平民", "word": "苹果"},
+      {"seat": 10, "role": "平民", "word": "苹果"}
+    ]
+  },
+  "B001": {
+    "seats": [
+      {"seat": 1, "role": "平民", "word": "西瓜"},
+      {"seat": 2, "role": "平民", "word": "西瓜"},
+      {"seat": 3, "role": "平民", "word": "西瓜"},
+      {"seat": 4, "role": "卧底", "word": "哈密瓜"},
+      {"seat": 5, "role": "平民", "word": "西瓜"},
+      {"seat": 6, "role": "平民", "word": "西瓜"},
+      {"seat": 7, "role": "卧底", "word": "哈密瓜"},
+      {"seat": 8, "role": "平民", "word": "西瓜"}
+    ]
+  },
+  "C001": {
+    "seats": [
+      {"seat": 1, "role": "平民", "word": "猫"},
+      {"seat": 2, "role": "平民", "word": "猫"},
+      {"seat": 3, "role": "平民", "word": "猫"},
+      {"seat": 4, "role": "平民", "word": "猫"},
+      {"seat": 5, "role": "卧底", "word": "老虎"},
+      {"seat": 6, "role": "平民", "word": "猫"},
+      {"seat": 7, "role": "平民", "word": "猫"},
+      {"seat": 8, "role": "平民", "word": "猫"},
+      {"seat": 9, "role": "卧底", "word": "老虎"},
+      {"seat": 10, "role": "平民", "word": "猫"},
+      {"seat": 11, "role": "平民", "word": "猫"},
+      {"seat": 12, "role": "平民", "word": "猫"}
+    ]
+  }
+}

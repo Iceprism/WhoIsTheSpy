@@ -1,0 +1,13 @@
+{
+    "name": "sswd/who-is-spy",
+    "description": "谁是卧底 - 局域网实时游戏工具",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "workerman/workerman": "^4.1",
+        "ext-redis": "*"
+    },
+    "autoload": {
+        "classmap": ["src/"]
+    }
+}
