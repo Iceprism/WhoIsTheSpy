@@ -6,8 +6,11 @@
     'use strict';
 
     // ==================== 配置 ====================
-    const API_URL = '/sswd/api/join.php';
-    const WS_URL = `ws://${window.location.hostname}:2346`;
+    // API 地址 - 根据当前路径自动计算
+    const API_URL = window.location.pathname.replace(/\/public\/?.*$/, '') + '/api/join.php';
+    // WebSocket 地址 - 使用当前域名，端口 2346
+    const WS_PORT = 2346;
+    const WS_URL = `ws://${window.location.hostname}:${WS_PORT}`;
 
     // ==================== 状态 ====================
     let ws = null;

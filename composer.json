@@ -5,9 +5,17 @@
     "require": {
         "php": ">=7.4",
         "workerman/workerman": "^4.1",
-        "ext-redis": "*"
+        "predis/predis": "^2.0"
+    },
+    "suggest": {
+        "ext-redis": "PHP Redis extension (optional, improves performance)"
     },
     "autoload": {
         "classmap": ["src/"]
+    },
+    "config": {
+        "platform": {
+            "php": "7.4"
+        }
     }
 }

@@ -13,6 +13,19 @@ require_once __DIR__ . '/src/RoomConfig.php';
 use Workerman\Worker;
 use Workerman\Connection\TcpConnection;
 
+// ==================== 宝塔环境兼容性配置 ====================
+
+// 设置 PID 文件目录为 /tmp（避免权限问题）
+if (strpos(__DIR__, '/www/wwwroot/') !== false) {
+    // 宝塔环境
+    $pidDir = '/tmp/workerman_pids';
+    if (!is_dir($pidDir)) {
+        @mkdir($pidDir, 0777, true);
+    }
+    // 设置 Worker 的 PID 目录
+    Worker::$pidFile = $pidDir . '/' . basename(__DIR__) . '.pid';
+}
+
 // 创建 WebSocket 服务器
 $ws_worker = new Worker("websocket://0.0.0.0:2346");
 

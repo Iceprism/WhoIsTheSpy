@@ -26,52 +26,55 @@ sswd/
 
 ## 🚀 快速开始
 
-### 1. 安装依赖
+### 1. 上传文件
+
+将整个 `sswd` 目录上传到宝塔网站目录，例如：`/www/wwwroot/your-domain/sswd/`
+
+### 2. 安装依赖
+
+在宝塔面板的「终端」或 SSH 中执行：
 
 ```bash
+cd /www/wwwroot/your-domain/sswd
 composer install
 ```
 
-### 2. 配置房间
-
-编辑 `config/rooms.json`，设置房间和座位信息：
-
-```json
-{
-  "A001": {
-    "seats": [
-      {"seat": 1, "role": "平民", "word": "苹果"},
-      {"seat": 2, "role": "平民", "word": "苹果"},
-      {"seat": 3, "role": "卧底", "word": "香蕉"},
-      ...
-    ]
-  }
-}
-```
-
-### 3. 启动服务
-
-**Windows (PowerShell):**
-```powershell
-# 启动 Redis（确保 Redis 已安装并运行）
-redis-server
-
-# 启动 WebSocket 服务器（新开一个终端）
-php ws_server.php start
-```
-
-**Linux/Mac:**
+如果 composer 命令找不到，使用完整路径：
 ```bash
-# 启动 Redis
-redis-server &
-
-# 启动 WebSocket 服务器
-php ws_server.php start -d
+/www/server/php/74/bin/php /usr/bin/composer install
 ```
 
-### 4. 访问游戏
+### 3. 设置脚本权限
 
-浏览器打开：`http://localhost/sswd/public/`
+```bash
+chmod +x start.sh stop.sh status.sh
+```
+
+### 4. 防火墙设置
+
+在宝塔面板「安全」中放行端口 **2346**（WebSocket 端口）
+
+同时检查服务器安全组（阿里云/腾讯云等）是否放行 2346
+
+### 5. 启动服务
+
+```bash
+# 前台模式（调试用，Ctrl+C 停止）
+./start.sh
+
+# 后台守护进程模式（推荐）
+./start.sh -d
+
+# 查看状态
+./status.sh
+
+# 停止服务
+./stop.sh
+```
+
+### 6. 访问游戏
+
+浏览器打开：`http://你的域名/sswd/public/`
 
 ## 🎮 游戏流程
 
@@ -139,16 +142,81 @@ php ws_server.php start -d
 - 这是一次性运行的工具，不是长期服务
 - 游戏结束后建议重启服务清理状态
 - 最多支持 7 个房间同时运行
-- 需要确保 2346 端口未被占用
+- 需要确保 **2346 端口** 在宝塔防火墙和服务器安全组中放行
+- 如果使用域名访问，WebSocket 会自动使用相同域名
+
+## 🔧 房间配置
+
+编辑 `config/rooms.json` 设置房间和词语：
+
+```json
+{
+  "A001": {
+    "seats": [
+      {"seat": 1, "role": "平民", "word": "苹果"},
+      {"seat": 2, "role": "平民", "word": "苹果"},
+      {"seat": 3, "role": "卧底", "word": "香蕉"},
+      ...
+    ]
+  }
+}
+```
 
 ## 🛑 停止服务
 
 ```bash
-# 停止 WebSocket 服务器
-Ctrl+C
+./stop.sh
+```
 
-# 停止 Redis
-redis-cli shutdown
+## 🐛 常见问题
+
+### 1. composer install 出错
+
+**错误：Your requirements could not be resolved**
+
+解决方案：确保已安装 Predis，重新运行：
+```bash
+composer install
+```
+
+如果仍有问题，检查 PHP 版本：
+```bash
+php -v
+```
+
+### 2. WebSocket 连接失败
+- 检查 2346 端口是否在宝塔「安全」中放行
+- 检查服务器安全组（阿里云/腾讯云）是否放行 2346
+- 检查防火墙: `sudo iptables -L | grep 2346`
+
+### 3. Redis 连接失败
+```bash
+# 检查 Redis 是否运行
+redis-cli ping
+# 应该返回 PONG
+
+# 检查 Redis 状态
+systemctl status redis
+
+# 启动 Redis
+systemctl start redis
+```
+
+### 4. PHP 找不到 Predis
+```bash
+# 确保 composer.json 中包含了 Predis
+cat composer.json | grep predis
+
+# 重新安装
+composer install --no-cache
+```
+
+### 5. Workerman 报错 "Cannot assign requested address"
+
+说明 Workerman 绑定的 IP 有问题，修改 `ws_server.php` 中的绑定地址：
+```php
+// 改为
+$ws_worker = new Worker("websocket://0.0.0.0:2346");
 ```
 
 ---
